@@ -6,13 +6,11 @@ exports.handler = async function(event, context) {
     const apiKey = process.env.NEBIUS_API_KEY;
 
     // 3. Define the Nebius API endpoint and request body
-    // NOTE: This is the official endpoint. It should be correct.
     const apiUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion';
     
     // *** THIS IS THE CORRECTED PART FOR NEBIUS STUDIO ***
-    // We are replacing the complex "modelUri" with a simpler "model" field.
     const requestBody = {
-        model: "yandexgpt-lite", // This is a common model name. Check docs if it's different.
+        model: "yandexgpt-lite", // Using the simpler "model" field
         completionOptions: {
           stream: false,
           temperature: 0.6,
@@ -32,7 +30,6 @@ exports.handler = async function(event, context) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // Your API key is a JWT, so "Bearer" is the correct authorization type.
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify(requestBody)
@@ -45,16 +42,9 @@ exports.handler = async function(event, context) {
         }
 
         const data = await response.json();
-
-        // POWERFUL DEBUGGING: This will print the full, successful response to the Netlify log.
-        // This helps us find the correct path to the AI's reply.
         console.log("Full Nebius Response:", JSON.stringify(data, null, 2));
-
-        // 5. Extract the actual text from the Nebius response.
-        // My previous guess was likely correct, but the log above will confirm it.
         const aiReply = data.result.alternatives[0].message.text;
 
-        // 6. Send the clean response back to our front-end
         return {
             statusCode: 200,
             body: JSON.stringify({ reply: aiReply })
