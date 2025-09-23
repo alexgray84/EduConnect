@@ -1,15 +1,15 @@
 exports.handler = async function(event, context) {
     const { prompt } = JSON.parse(event.body);
-    const apiKey = process.env.NEBIUS_API_KEY;
-    const apiUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion';
-    
+
+    // Using our new, correct environment variable
+    const apiKey = process.env.OPENROUTER_API_KEY;
+
+    // The standard API endpoint for OpenRouter
+    const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+
+    // The standard API request body (OpenAI format)
     const requestBody = {
-        model: "yandexgpt-lite", 
-        completionOptions: {
-          stream: false,
-          temperature: 0.6,
-          maxTokens: "2000"
-        },
+        model: "mistralai/mistral-7b-instruct:free", // A great, fast, and FREE model to start
         messages: [
           {
             role: "user",
@@ -23,28 +23,30 @@ exports.handler = async function(event, context) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+                // OpenRouter uses the standard "Bearer" token authorization
+                'Authorization': `Bearer ${apiKey}`,
+                // OpenRouter requires these two headers to identify your app
+                'HTTP-Referer': 'https://educonekt.netlify.app', // Your site URL
+                'X-Title': 'EduConnect' // Your site name
             },
             body: JSON.stringify(requestBody)
         });
 
         if (!response.ok) {
             const errorBody = await response.text();
-            console.error(`Nebius API Error Response: ${errorBody}`);
-            throw new Error(`Nebius API Error: ${response.status}`);
+            console.error(`OpenRouter API Error Response: ${errorBody}`);
+            throw new Error(`OpenRouter API Error: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log("Full Nebius Response:", JSON.stringify(data, null, 2));
+        console.log("Full OpenRouter Response:", JSON.stringify(data, null, 2));
         
-        const aiReply = data.result.alternatives[0].message.text;
-
-        // <<< NEW DEBUG LINE
-        const debugReply = `[DEBUG: Running latest code] ${aiReply}`;
+        // The standard way to get the reply from an OpenAI-compatible API
+        const aiReply = data.choices[0].message.content;
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ reply: debugReply }) // Sending the debug-prefixed reply
+            body: JSON.stringify({ reply: aiReply })
         };
 
     } catch (error) {
