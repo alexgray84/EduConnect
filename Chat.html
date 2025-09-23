@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Academic Advisor</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- For Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="chat-layout">
+        <header>
+            <div class="student-info">
+                <h1 id="student-name-header">Nathan Patel - Parent Portal</h1>
+                <p id="student-details-header">Science Program 2025 | Student ID: 702</p>
+            </div>
+            <div class="user-actions">
+                <i class="fa-solid fa-bell"></i>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="tabs">
+                <button class="tab-btn active"><i class="fa-solid fa-robot"></i> AI Chat</button>
+                <button class="tab-btn"><i class="fa-solid fa-chart-line"></i> Progress Dashboard</button>
+            </div>
+
+            <div class="chat-window">
+                <div class="chat-header">
+                    <h3><i class="fa-solid fa-leaf"></i> AI Academic Advisor</h3>
+                    <span>(Connected to Academic Data)</span>
+                </div>
+                <div id="message-container">
+                    <!-- Messages will be added here by JavaScript -->
+                </div>
+            </div>
+            
+            <div class="chat-input-area">
+                <form id="message-form">
+                    <input type="text" id="message-input" placeholder="Ask about Nathan Patel's academic progress...">
+                    <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+                <div class="suggested-prompts">
+                    <button class="prompt-btn">How is my child doing overall?</button>
+                    <button class="prompt-btn">Recent assessment results?</button>
+                    <button class="prompt-btn">What are their strongest subjects?</button>
+                    <button class="prompt-btn">Any areas that need improvement?</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/chat.js"></script>
+</body>
+</html>
