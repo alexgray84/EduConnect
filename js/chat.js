@@ -21,15 +21,19 @@ window.addEventListener('DOMContentLoaded', () => {
         return; // Stop running the rest of the script
     }
 
-    // --- 3. INITIALIZE THE CHAT PAGE ---
-    function initializePage() {
-        // Update header with the correct student info
-        studentNameHeader.textContent = `${studentData.name} - Parent Portal`;
-        studentDetailsHeader.textContent = studentData.details;
+    / --- 3. INITIALIZE THE CHAT PAGE ---
+function initializePage() {
+    // Update header with the correct student info
+    studentNameHeader.textContent = `${studentData.name} - Parent Portal`;
+    studentDetailsHeader.textContent = studentData.details;
+    
+    // THIS IS THE NEW LINE TO ADD:
+    messageInput.placeholder = `Ask about ${studentData.name}'s academic progress...`;
 
-        // Display the initial welcome message from the AI
-        const welcomeMessage = `Hello! I'm your AI academic assistant. I have access to ${studentData.name}'s academic records and can help you understand their progress, strengths, and areas for growth. What would you like to know about ${studentData.name}'s education?`;
-        displayMessage(welcomeMessage, 'ai');
+    // Display the initial welcome message from the AI
+    const welcomeMessage = `Hello! I'm your AI academic assistant. I have access to ${studentData.name}'s academic records...`;
+    displayMessage(welcomeMessage, 'ai');
+}
     }
 
     // --- 4. HELPER FUNCTION TO DISPLAY MESSAGES ---
@@ -43,23 +47,37 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- 5. FUNCTION TO GET AI RESPONSE ---
-    async function getAIResponse(prompt) {
-        // For now, let's just return a fake response to test the UI.
-        // We will replace this with our real Netlify Function call.
-        displayMessage('Thinking...', 'ai'); // Show a thinking indicator
+async function getAIResponse(prompt) {
+    displayMessage('Thinking...', 'ai');
 
-        // ** THIS IS WHERE YOU'LL CALL YOUR NETLIFY FUNCTION **
-        // const response = await fetch('/.netlify/functions/getAiResponse', { ... });
-        // const data = await response.json();
-        // const aiReply = data.reply;
+    try {
+        // This is the real call to our Netlify Function.
+        const response = await fetch('/.netlify/functions/getAiResponse', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // We send the user's prompt in the request body
+            body: JSON.stringify({ prompt: prompt }) 
+        });
 
-        // FAKE DELAY to simulate network request
-        await new Promise(resolve => setTimeout(resolve, 1500)); 
-        const fakeReply = `This is a placeholder response about "${prompt}". Once connected to the Nebius AI, I will provide real insights based on ${studentData.name}'s data.`;
-        
-        // Remove the "Thinking..." message and show the real one
-        messageContainer.lastChild.remove(); 
-        displayMessage(fakeReply, 'ai');
+        // Remove the "Thinking..." message
+        messageContainer.lastChild.remove();
+
+        if (!response.ok) {
+            // If the server function has an error, show a user-friendly message
+            throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const aiReply = data.reply; // Get the reply from the JSON
+        displayMessage(aiReply, 'ai');
+
+    } catch (error) {
+        console.error('Error fetching AI response:', error);
+        // Make sure to remove "Thinking..." even if there's an error
+        if (messageContainer.lastChild.textContent === 'Thinking...') {
+            messageContainer.lastChild.remove();
+        }
+        displayMessage('Sorry, I seem to be having trouble connecting. Please try again in a moment.', 'ai');
     }
 
     // --- 6. EVENT LISTENERS ---
