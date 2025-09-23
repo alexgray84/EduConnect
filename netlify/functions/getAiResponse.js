@@ -1,14 +1,8 @@
 exports.handler = async function(event, context) {
-    // 1. Get the user's prompt from the front-end request
     const { prompt } = JSON.parse(event.body);
-
-    // 2. Get our secret API key from the Netlify environment variables
     const apiKey = process.env.NEBIUS_API_KEY;
-
-    // 3. Define the Nebius API endpoint and request body
     const apiUrl = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion';
     
-    // Using the corrected "model" field for Nebius Studio
     const requestBody = {
         model: "yandexgpt-lite", 
         completionOptions: {
@@ -25,7 +19,6 @@ exports.handler = async function(event, context) {
     };
 
     try {
-        // 4. Make the secure call to the Nebius API
         const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
@@ -42,17 +35,16 @@ exports.handler = async function(event, context) {
         }
 
         const data = await response.json();
-        
-        // This log will help us if the response structure is unexpected
         console.log("Full Nebius Response:", JSON.stringify(data, null, 2));
-
-        // 5. Extract the actual text from the Nebius response.
+        
         const aiReply = data.result.alternatives[0].message.text;
 
-        // 6. Send the clean response back to our front-end
+        // <<< NEW DEBUG LINE
+        const debugReply = `[DEBUG: Running latest code] ${aiReply}`;
+
         return {
             statusCode: 200,
-            body: JSON.stringify({ reply: aiReply })
+            body: JSON.stringify({ reply: debugReply }) // Sending the debug-prefixed reply
         };
 
     } catch (error) {
