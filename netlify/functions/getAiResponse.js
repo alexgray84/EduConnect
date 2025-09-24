@@ -26,6 +26,13 @@ exports.handler = async function(event, context) {
             method: 'POST',
             headers: { /* ... same headers ... */ },
             body: JSON.stringify(requestBody)
+            const aiReply = data.choices[0].message.content;
+
+        // ADD THIS LINE
+        console.log(`SUCCESS: Returning AI reply: "${aiReply.substring(0, 50)}..."`);
+        
+        return { statusCode: 200, body: JSON.stringify({ reply: aiReply }) };
+    } catch (error) {
         });
         if (!response.ok) { /* ... same error handling ... */ }
         const data = await response.json();
