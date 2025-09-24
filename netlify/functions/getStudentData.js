@@ -2,13 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event, context) {
     const { studentId } = JSON.parse(event.body);
-
-    if (!studentId) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Student ID is required.' }) };
-    }
-
     const numericStudentId = parseInt(studentId, 10);
-
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_ANON_KEY;
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -35,17 +29,12 @@ exports.handler = async function(event, context) {
                 if (entry.TaggedSkills) {
                     const skillCodes = entry.TaggedSkills.split(',').map(s => s.trim());
                     entry.FullSkillsData = skillCodes.map(code => skillMap[code]).filter(Boolean);
-                    console.log("SUCCESS: Returning full student data object.");
-        
-        return { statusCode: 200, body: JSON.stringify(studentData) };
-    } catch (error) {
                 }
             });
         }
-
         return { statusCode: 200, body: JSON.stringify(studentData) };
     } catch (error) {
-        console.error('Error in function:', error.message);
-        return { statusCode: 500, body: JSON.stringify({ error: `Function failed. Details: ${error.message}` }) };
+        console.error('Error in getStudentData function:', error.message);
+        return { statusCode: 500, body: JSON.stringify({ error: `Function failed: ${error.message}` }) };
     }
 };
