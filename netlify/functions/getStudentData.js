@@ -7,21 +7,20 @@ exports.handler = async function(event, context) {
         return { statusCode: 400, body: JSON.stringify({ error: 'Student ID is required.' }) };
     }
 
+    // --- NEW DEBUGGING AND FIX ---
+    console.log(`Received studentId from front-end: "${studentId}" (type: ${typeof studentId})`);
+    const numericStudentId = parseInt(studentId, 10); // Convert the string "702" to the number 702
+    // ----------------------------
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_ANON_KEY;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     try {
-        // === THIS IS THE CRITICAL CHANGE ===
-        // We are now saying: "Select everything, and for the related data from the 'Markbook' table,
-        // please name the result 'assessments' so we know exactly what to call it."
         let { data: studentData, error } = await supabase
             .from('Students')
-            .select(`
-                *,
-                assessments:Markbook(*)
-            `) // Explicitly naming the joined data "assessments"
-            .eq('StudentID', studentId)
+            .select(`*, assessments:Markbook(*)`)
+            .eq('StudentID', numericStudentId) // Use the converted numeric ID for the query
             .single();
 
         if (error) throw error;
@@ -34,7 +33,6 @@ exports.handler = async function(event, context) {
             return map;
         }, {});
 
-        // Now we use our explicit name "assessments" to find the data.
         studentData.assessments.forEach(entry => {
             if (entry.TaggedSkills) {
                 const skillCodes = entry.TaggedSkills.split(',').map(s => s.trim());
@@ -45,6 +43,6 @@ exports.handler = async function(event, context) {
         return { statusCode: 200, body: JSON.stringify(studentData) };
     } catch (error) {
         console.error('Error in function:', error.message);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to fetch and process student data.' }) };
+        return { statusCode: 500, body: JSON.stringify({ error: `Failed to fetch and process student data. Details: ${error.message}` }) };
     }
 };
