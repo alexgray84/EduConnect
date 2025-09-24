@@ -1,3 +1,3 @@
-[functions]
+[[functions]]
   # Increase the timeout for all functions to 25 seconds
   timeout = 25
