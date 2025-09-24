@@ -35,6 +35,10 @@ exports.handler = async function(event, context) {
                 if (entry.TaggedSkills) {
                     const skillCodes = entry.TaggedSkills.split(',').map(s => s.trim());
                     entry.FullSkillsData = skillCodes.map(code => skillMap[code]).filter(Boolean);
+                    console.log("SUCCESS: Returning full student data object.");
+        
+        return { statusCode: 200, body: JSON.stringify(studentData) };
+    } catch (error) {
                 }
             });
         }
