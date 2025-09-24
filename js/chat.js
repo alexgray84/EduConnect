@@ -1,6 +1,5 @@
 window.addEventListener('DOMContentLoaded', () => {
-
-    // --- 1. GET ELEMENTS FROM THE PAGE ---
+    // ... (the variable declarations at the top are the same) ...
     const studentNameHeader = document.getElementById('student-name-header');
     const studentDetailsHeader = document.getElementById('student-details-header');
     const messageContainer = document.getElementById('message-container');
@@ -9,29 +8,24 @@ window.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logout-btn');
     const promptButtons = document.querySelectorAll('.prompt-btn');
 
-    // --- 2. CHECK FOR LOGGED-IN USER ---
     const studentData = JSON.parse(localStorage.getItem('currentStudent'));
 
     if (!studentData) {
-        // If no student data is found, redirect to the login page.
         window.location.href = '/index.html';
         return; 
     }
 
-    // --- 3. INITIALIZE THE CHAT PAGE ---
     function initializePage() {
-        // Update header with the correct student info
+        // ... (this function is the same) ...
         studentNameHeader.textContent = `${studentData.name} - Parent Portal`;
         studentDetailsHeader.textContent = studentData.details;
         messageInput.placeholder = `Ask about ${studentData.name}'s academic progress...`;
-
-        // Display the initial welcome message from the AI
-        const welcomeMessage = `Hello! I'm your AI academic assistant. I have access to ${studentData.name}'s academic records and can help you understand their progress, strengths, and areas for growth. What would you like to know about ${studentData.name}'s education?`;
+        const welcomeMessage = `Hello! I'm your AI academic assistant. I am connected to ${studentData.name}'s academic records. How can I help you today?`;
         displayMessage(welcomeMessage, 'ai');
     }
 
-    // --- 4. HELPER FUNCTION TO DISPLAY MESSAGES ---
     function displayMessage(message, sender) {
+        // ... (this function is the same) ...
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', `${sender}-message`);
         messageDiv.textContent = message;
@@ -39,39 +33,55 @@ window.addEventListener('DOMContentLoaded', () => {
         messageContainer.scrollTop = messageContainer.scrollHeight;
     }
 
-    // --- 5. FUNCTION TO GET AI RESPONSE (THE REAL ONE) ---
+    // --- THIS IS THE NEW, ORCHESTRATING FUNCTION ---
     async function getAIResponse(prompt) {
-        displayMessage('Thinking...', 'ai');
+        displayMessage('Fetching student data...', 'ai');
 
         try {
-            // This is the real call to our Netlify Function.
-            const response = await fetch('/.netlify/functions/getAiResponse', {
+            // STEP 1: Fetch the complete student record from Supabase
+            const dataRes = await fetch('/.netlify/functions/getStudentData', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: prompt }) 
+                body: JSON.stringify({ studentId: studentData.studentId })
             });
 
-            // Remove the "Thinking..." message
-            messageContainer.lastChild.remove();
+            if (!dataRes.ok) {
+                throw new Error(`Failed to fetch student data: ${dataRes.status}`);
+            }
+            const fullStudentData = await dataRes.json();
 
-            if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+            // Update the status message for the user
+            messageContainer.lastChild.textContent = 'Analyzing data with AI...';
+
+            // STEP 2: Send the prompt AND the fetched data to the AI for analysis
+            const aiRes = await fetch('/.netlify/functions/getAiResponse', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    prompt: prompt,
+                    studentName: studentData.name,
+                    studentData: fullStudentData // Pass the real data here
+                })
+            });
+
+            if (!aiRes.ok) {
+                throw new Error(`AI analysis failed: ${aiRes.status}`);
             }
 
-            const data = await response.json();
-            const aiReply = data.reply;
-            displayMessage(aiReply, 'ai');
+            // Remove the status message and display the final answer
+            messageContainer.lastChild.remove();
+            const aiData = await aiRes.json();
+            displayMessage(aiData.reply, 'ai');
 
         } catch (error) {
-            console.error('Error fetching AI response:', error);
-            if (messageContainer.lastChild && messageContainer.lastChild.textContent === 'Thinking...') {
+            console.error('Orchestration Error:', error);
+            if (messageContainer.lastChild) {
                 messageContainer.lastChild.remove();
             }
-            displayMessage('Sorry, I seem to be having trouble connecting. Please try again in a moment.', 'ai');
+            displayMessage('Sorry, there was a problem processing your request. Please try again.', 'ai');
         }
     }
 
-    // --- 6. EVENT LISTENERS ---
+    // ... (the event listeners at the bottom are the same) ...
     messageForm.addEventListener('submit', (event) => {
         event.preventDefault();
         const userMessage = messageInput.value.trim();
@@ -81,20 +91,58 @@ window.addEventListener('DOMContentLoaded', () => {
             messageInput.value = '';
         }
     });
+    promptButtons.forEach(button => { /* ... same as before ... */ });
+    logoutBtn.addEventListener('click', () => { /* ... same as before ... */ });
 
-    promptButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const prompt = button.textContent;
-            displayMessage(prompt, 'user');
-            getAIResponse(prompt);
-        });
-    });
-
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('currentStudent');
-        window.location.href = '/index.html';
-    });
-
-    // --- 7. START THE PAGE ---
     initializePage();
 });
+Step 2: Update the Data-Fetching Function (getStudentData.js)
+This function needs to correctly receive the studentId from the front-end.
+Action: Replace the code in netlify/functions/getStudentData.js with this. Remember to check that from('Students') and from('Markbook') match your table names exactly!
+code
+JavaScript
+// NEW VERSION - This function now receives the studentId from the front-end.
+const { createClient } = require('@supabase/supabase-js');
+
+exports.handler = async function(event, context) {
+    const { studentId } = JSON.parse(event.body);
+
+    if (!studentId) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'Student ID is required.' }) };
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    try {
+        let { data: studentData, error } = await supabase
+            .from('Students') // <-- VERIFY THIS NAME
+            .select(`*, Markbook(*)`) // <-- VERIFY 'Markbook' NAME
+            .eq('StudentID', studentId) // <-- VERIFY 'StudentID' NAME
+            .single();
+
+        if (error) throw error;
+        
+        // ... (The skill enrichment part remains the same) ...
+        let { data: skills, error: skillsError } = await supabase.from('Skills').select('*'); // <-- VERIFY 'Skills' NAME
+        if (skillsError) throw skillsError;
+        
+        const skillMap = skills.reduce((map, skill) => {
+            map[skill.SkillID] = skill;
+            return map;
+        }, {});
+
+        studentData.Markbook.forEach(entry => {
+            if (entry.TaggedSkills) {
+                const skillCodes = entry.TaggedSkills.split(',').map(s => s.trim());
+                entry.FullSkillsData = skillCodes.map(code => skillMap[code]).filter(Boolean);
+            }
+        });
+
+        return { statusCode: 200, body: JSON.stringify(studentData) };
+    } catch (error) {
+        console.error('Error in function:', error.message);
+        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to fetch and process student data.' }) };
+    }
+};
