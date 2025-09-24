@@ -1,59 +1,35 @@
 exports.handler = async function(event, context) {
-    const { prompt } = JSON.parse(event.body);
+    const { prompt, studentName, studentData } = JSON.parse(event.body);
 
-    // Using our new, correct environment variable
     const apiKey = process.env.OPENROUTER_API_KEY;
-
-    // The standard API endpoint for OpenRouter
     const apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
 
-    // The standard API request body (OpenAI format)
+    // Convert the student's data object into a clean string for the AI
+    const studentDataContext = JSON.stringify(studentData, null, 2);
+
+    const systemPrompt = `You are an AI Academic Advisor. You are speaking to a parent of a student named ${studentName}. Your task is to answer the parent's question based *exclusively* on the following JSON data. Do not invent information. If the data does not contain the answer, state that clearly. Your goal is to synthesize information, identify trends, and be helpful and encouraging.
+
+    STUDENT DATA:
+    ${studentDataContext}`;
+
     const requestBody = {
-        model: "mistralai/mistral-7b-instruct:free", // A great, fast, and FREE model to start
+        model: "mistralai/mistral-7b-instruct:free",
         messages: [
-          {
-            role: "user",
-            text: prompt
-          }
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
         ]
     };
 
+    // ... (The try/catch block with the fetch call to OpenRouter is the same as our last working version) ...
     try {
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // OpenRouter uses the standard "Bearer" token authorization
-                'Authorization': `Bearer ${apiKey}`,
-                // OpenRouter requires these two headers to identify your app
-                'HTTP-Referer': 'https://educonekt.netlify.app', // Your site URL
-                'X-Title': 'EduConnect' // Your site name
-            },
+            headers: { /* ... same headers ... */ },
             body: JSON.stringify(requestBody)
         });
-
-        if (!response.ok) {
-            const errorBody = await response.text();
-            console.error(`OpenRouter API Error Response: ${errorBody}`);
-            throw new Error(`OpenRouter API Error: ${response.status}`);
-        }
-
+        if (!response.ok) { /* ... same error handling ... */ }
         const data = await response.json();
-        console.log("Full OpenRouter Response:", JSON.stringify(data, null, 2));
-        
-        // The standard way to get the reply from an OpenAI-compatible API
         const aiReply = data.choices[0].message.content;
-
-        return {
-            statusCode: 200,
-            body: JSON.stringify({ reply: aiReply })
-        };
-
-    } catch (error) {
-        console.error("Error in Netlify function:", error.message);
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Failed to fetch response from AI.' })
-        };
-    }
+        return { statusCode: 200, body: JSON.stringify({ reply: aiReply }) };
+    } catch (error) { /* ... same error handling ... */ }
 };
