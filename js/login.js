@@ -1,38 +1,37 @@
-const loginForm = document.getElementById('login-form');
-const accessCodeInput = document.getElementById('access-code');
+const { createClient } = require('@supabase/supabase-js');
 
-loginForm.addEventListener('submit', async (event) => {
-    event.preventDefault(); 
-    const code = accessCodeInput.value.trim();
-    if (!code) {
-        alert('Please enter an access code.');
-        return;
-    }
+exports.handler = async function(event, context) {
+    const { accessCode } = JSON.parse(event.body);
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     try {
-        const response = await fetch('/.netlify/functions/login', {
-            method: 'POST',
-            body: JSON.stringify({ accessCode: code })
-        });
+        // Find the student whose AccessCode matches the one provided.
+        let { data, error } = await supabase
+            .from('Students')
+            .select('StudentID, FirstName, LastName')
+            .eq('AccessCode', accessCode)
+            .limit(1)           // Get the first match
+            .maybeSingle();     // ** THE FIX IS HERE ** Don't error if multiple are found.
 
-        if (!response.ok) {
-            throw new Error('Invalid access code.');
+        if (error) throw error;
+
+        // If no student was found, data will be null.
+        if (!data) {
+            throw new Error("No student found with that access code.");
         }
 
-        const student = await response.json();
-        
-        // Create the user object to store in the browser
-        const userToStore = {
-            studentId: student.StudentID,
-            name: `${student.FirstName} ${student.LastName}`,
-            details: `Student ID: ${student.StudentID}` // Simplified details
+        // If a student is found, return their data.
+        return {
+            statusCode: 200,
+            body: JSON.stringify(data)
         };
-
-        localStorage.setItem('currentStudent', JSON.stringify(userToStore));
-        window.location.href = '/chat.html';
-
     } catch (error) {
-        alert('Invalid access code. Please try again.');
-        accessCodeInput.value = '';
+        console.error('Login error:', error.message);
+        return {
+            statusCode: 404, 
+            body: JSON.stringify({ error: 'Invalid access code.' })
+        };
     }
-});
+};
