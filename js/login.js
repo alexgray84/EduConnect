@@ -1,37 +1,30 @@
-const { createClient } = require('@supabase/supabase-js');
+const loginForm = document.getElementById('login-form');
+const accessCodeInput = document.getElementById('access-code');
 
-exports.handler = async function(event, context) {
-    const { accessCode } = JSON.parse(event.body);
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    try {
-        // Find the student whose AccessCode matches the one provided.
-        let { data, error } = await supabase
-            .from('Students')
-            .select('StudentID, FirstName, LastName')
-            .eq('AccessCode', accessCode)
-            .limit(1)           // Get the first match
-            .maybeSingle();     // ** THE FIX IS HERE ** Don't error if multiple are found.
-
-        if (error) throw error;
-
-        // If no student was found, data will be null.
-        if (!data) {
-            throw new Error("No student found with that access code.");
-        }
-
-        // If a student is found, return their data.
-        return {
-            statusCode: 200,
-            body: JSON.stringify(data)
-        };
-    } catch (error) {
-        console.error('Login error:', error.message);
-        return {
-            statusCode: 404, 
-            body: JSON.stringify({ error: 'Invalid access code.' })
-        };
-    }
+// This database now maps specific codes to specific students from your CSV.
+const FAKE_DATABASE = {
+    // Shared access code - defaults to Amelia for testing
+    "SCI-2025": { studentId: "701", name: "Amelia Smith", details: "Science Program 2025 | Student ID: 701" },
+    
+    // Specific student IDs for direct login
+    "701": { studentId: "701", name: "Amelia Smith", details: "Science Program 2025 | Student ID: 701" },
+    "702": { studentId: "702", name: "Nathan Patel", details: "Science Program 2025 | Student ID: 702" },
+    "703": { studentId: "703", name: "Priya Johnson", details: "Science Program 2025 | Student ID: 703" },
+    // Add any other student IDs you want to test directly here
 };
+
+loginForm.addEventListener('submit', (event) => {
+    event.preventDefault(); 
+    const code = accessCodeInput.value.trim().toUpperCase(); // Standardize input
+    
+    if (FAKE_DATABASE[code]) {
+        const student = FAKE_DATABASE[code];
+        
+        localStorage.setItem('currentStudent', JSON.stringify(student));
+        window.location.href = '/chat.html';
+
+    } else {
+        alert('Invalid access code. Please try again.');
+        accessCodeInput.value = '';
+    }
+});
