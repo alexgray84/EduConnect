@@ -21,7 +21,7 @@ exports.handler = async function(event, context) {
             .from('Students')         // 1. Is your student table named 'Students'? (Case sensitive!)
             .select(`
                 *,
-                Markbooks(*)
+                Markbook(*)
             `)                        // 2. Is your markbook table named 'Markbooks'?
             .eq('StudentID', studentId) // 3. Is your student ID column in BOTH tables named 'StudentID'?
             .single();
@@ -43,7 +43,7 @@ exports.handler = async function(event, context) {
         }, {});
 
         // Now, enrich the student's markbook data with the full skill descriptions.
-        studentData.Markbooks.forEach(entry => {
+        studentData.Markbook.forEach(entry => {
             if (entry.TaggedSkills) {
                 const skillCodes = entry.TaggedSkills.split(',').map(s => s.trim());
                 entry.FullSkillsData = skillCodes.map(code => skillMap[code]).filter(Boolean); // Replaces codes with full objects
