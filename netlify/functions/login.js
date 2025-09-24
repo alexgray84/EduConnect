@@ -12,10 +12,15 @@ exports.handler = async function(event, context) {
             .from('Students')
             .select('StudentID, FirstName, LastName')
             .eq('AccessCode', accessCode)
-            .limit(1) // Get the first match
-            .single(); // Expect exactly one result
+            .limit(1)           // Get the first match
+            .maybeSingle();     // ** THE FIX IS HERE ** Don't error if multiple are found.
 
         if (error) throw error;
+
+        // If no student was found, data will be null.
+        if (!data) {
+            throw new Error("No student found with that access code.");
+        }
 
         // If a student is found, return their data.
         return {
@@ -23,9 +28,9 @@ exports.handler = async function(event, context) {
             body: JSON.stringify(data)
         };
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login error:', error.message);
         return {
-            statusCode: 404, // Not Found is a good error for a failed login
+            statusCode: 404, 
             body: JSON.stringify({ error: 'Invalid access code.' })
         };
     }
